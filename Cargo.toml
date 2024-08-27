@@ -26,9 +26,9 @@ ahash = { version = "0.8.11", default-features = false, features = [
     "std",
 ] }
 document-features = " 0.2.8"
-eframe = { version = "0.28.1", default-features = false }
-egui = { version = "0.28.1", default-features = false }
-emath = { version = "0.28.1", default-features = false }
+eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "3ebce8268d67985956f07f04ff094208c323fa13", default-features = false }
+egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "3ebce8268d67985956f07f04ff094208c323fa13", default-features = false }
+emath = { git = "ssh://git@github.com/embotech/egui.git", rev = "3ebce8268d67985956f07f04ff094208c323fa13", default-features = false }
 image = { version = "0.25", default-features = false }
 serde = { version = "1", features = ["derive"] }
 
