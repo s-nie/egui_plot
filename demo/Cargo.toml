@@ -7,6 +7,7 @@ name = "demo"
 publish = false
 rust-version.workspace = true
 version.workspace = true
+default-run = "demo"
 
 [lints]
 workspace = true
@@ -14,23 +15,20 @@ workspace = true
 [dependencies]
 egui_plot = { workspace = true, features = ["serde"] }
 
-egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "3ebce8268d67985956f07f04ff094208c323fa13" }
-eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "3ebce8268d67985956f07f04ff094208c323fa13", default-features = false, features = [
+egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "7ceca0003d29f55022ecd85f01f4a17fe27ec9d8" }
+eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "7ceca0003d29f55022ecd85f01f4a17fe27ec9d8", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
 ] }
-log = "0.4"
-serde = { version = "1", features = ["derive"] }
+log.workspace = true
+serde = { workspace = true, features = ["derive"] }
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.10"
+env_logger.workspace = true
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen-futures = "0.4"
-
-# to access the DOM (to hide the loading text)
-[target.'cfg(target_arch = "wasm32")'.dependencies.web-sys]
-version = "0.3.4"
+wasm-bindgen-futures.workspace = true
+web-sys.workspace = true              # to access the DOM (to hide the loading text)
