@@ -15,8 +15,8 @@ workspace = true
 [dependencies]
 egui_plot = { workspace = true, features = ["serde"] }
 
-egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "7ceca0003d29f55022ecd85f01f4a17fe27ec9d8" }
-eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "7ceca0003d29f55022ecd85f01f4a17fe27ec9d8", default-features = false, features = [
+egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "ced4e4d75943a3a00aa9f9b8dcf2208354b2e202" }
+eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "ced4e4d75943a3a00aa9f9b8dcf2208354b2e202", default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
