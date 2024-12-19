@@ -5,6 +5,20 @@ This file is updated upon each release.
 Changes since the last release can be found at <https://github.com/emilk/egui_plot/compare/latest...HEAD> or by running the `scripts/generate_changelog.py` script.
 
 
+## 0.30.0 - 2024-12-17
+
+Full diff at https://github.com/emilk/egui_plot/compare/0.29.0..HEAD
+
+#### PRs
+* Update to egui `0.30.0`, MSRV to 1.80 [#59](https://github.com/emilk/egui_plot/pull/59) by [@bircni](https://github.com/bircni)
+* Allow setting a line's fill area's alpha channel [#34](https://github.com/emilk/egui_plot/pull/34) by [@maxded](https://github.com/maxded)
+* Use `Vec2b` in parameters [#43](https://github.com/emilk/egui_plot/pull/43) by [@bircni](https://github.com/bircni)
+* Fix axis thickness for multiple X or Y axes [#60](https://github.com/emilk/egui_plot/pull/60) by [@raymanfx](https://github.com/raymanfx)
+* Fix axis labels overlap with axis ticks [#57](https://github.com/emilk/egui_plot/pull/57) by [@mkalte666](https://github.com/mkalte666)
+* Add `PlotUi::add_item(Box<dyn PlotItem>)` [#51](https://github.com/emilk/egui_plot/pull/51) by [@freeformstu](https://github.com/freeformstu)
+* Implement custom ruler color for Plot [#47](https://github.com/emilk/egui_plot/pull/47) by [@gweisert](https://github.com/gweisert)
+
+
 ## 0.29.0 - 2024-09-26
 * Update to egui 0.29 [#48](https://github.com/emilk/egui_plot/pull/48) by [@emilk](https://github.com/emilk)
 
@@ -19,7 +33,7 @@ Nothing new
 
 ### 🔧 Changed
 * `Plot::Items:allow_hover` give possibility to masked the interaction on hovered item [#2558](https://github.com/emilk/egui/pull/2558) by [@haricot](https://github.com/haricot)
-* Expose `ClosestElem` and `PlotConfig` [#4380](https://github.com/emilk/egui/pull/4380) by [@Narcha](https://github.com/Narcha)
+* Expose `ClosestElem` and `PlotConfig` [#4380](https://github.com/emilk/egui/pull/4380) by [@rmburg](https://github.com/rmburg)
 * Introduce lifetime to `egui_plot::Plot` to replace `'static` fields [#4435](https://github.com/emilk/egui/pull/4435) by [@Fabus1184](https://github.com/Fabus1184)
 * Plot now respects the `interact_radius` set in the UI's style [#4520](https://github.com/emilk/egui/pull/4520) by [@YgorSouza](https://github.com/YgorSouza)
 * Improve behavior of plot auto-bounds with reduced data [#4632](https://github.com/emilk/egui/pull/4632) by [@abey79](https://github.com/abey79)

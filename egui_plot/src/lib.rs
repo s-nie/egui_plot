@@ -180,6 +180,7 @@ pub struct Plot<'a> {
     x_axes: Vec<AxisHints<'a>>, // default x axes
     y_axes: Vec<AxisHints<'a>>, // default y axes
     legend_config: Option<Legend>,
+    cursor_color: Option<Color32>,
     show_background: bool,
     show_axes: Vec2b,
 
@@ -227,6 +228,7 @@ impl<'a> Plot<'a> {
             x_axes: vec![AxisHints::new(Axis::X)],
             y_axes: vec![AxisHints::new(Axis::Y)],
             legend_config: None,
+            cursor_color: None,
             show_background: true,
             show_axes: true.into(),
 
@@ -578,31 +580,17 @@ impl<'a> Plot<'a> {
 
     /// Add this plot to an axis link group so that this plot will share the bounds with other plots in the
     /// same group. A plot cannot belong to more than one axis group.
-    #[allow(clippy::fn_params_excessive_bools)] // TODO(emilk): use a `Vec2` as argument instead
     #[inline]
-    pub fn link_axis(mut self, group_id: impl Into<Id>, link_x: bool, link_y: bool) -> Self {
-        self.linked_axes = Some((
-            group_id.into(),
-            Vec2b {
-                x: link_x,
-                y: link_y,
-            },
-        ));
+    pub fn link_axis(mut self, group_id: impl Into<Id>, link: impl Into<Vec2b>) -> Self {
+        self.linked_axes = Some((group_id.into(), link.into()));
         self
     }
 
     /// Add this plot to a cursor link group so that this plot will share the cursor position with other plots
     /// in the same group. A plot cannot belong to more than one cursor group.
-    #[allow(clippy::fn_params_excessive_bools)] // TODO(emilk): use a `Vec2` as argument instead
     #[inline]
-    pub fn link_cursor(mut self, group_id: impl Into<Id>, link_x: bool, link_y: bool) -> Self {
-        self.linked_cursors = Some((
-            group_id.into(),
-            Vec2b {
-                x: link_x,
-                y: link_y,
-            },
-        ));
+    pub fn link_cursor(mut self, group_id: impl Into<Id>, link: Vec2b) -> Self {
+        self.linked_cursors = Some((group_id.into(), link));
         self
     }
 
@@ -727,6 +715,15 @@ impl<'a> Plot<'a> {
         self
     }
 
+    /// Set custom cursor color.
+    ///
+    /// You may set the color to [`Color32::TRANSPARENT`] to hide the cursors.
+    #[inline]
+    pub fn cursor_color(mut self, color: Color32) -> Self {
+        self.cursor_color = Some(color);
+        self
+    }
+
     /// Interact with and add items to the plot and finally draw it.
     pub fn show<R>(
         self,
@@ -768,6 +765,7 @@ impl<'a> Plot<'a> {
             x_axes,
             y_axes,
             legend_config,
+            cursor_color,
             reset,
             show_background,
             show_axes,
@@ -853,7 +851,7 @@ impl<'a> Plot<'a> {
             auto_bounds: default_auto_bounds,
             hovered_legend_item: None,
             hidden_items: Default::default(),
-            transform: PlotTransform::new(plot_rect, min_auto_bounds, center_axis.x, center_axis.y),
+            transform: PlotTransform::new(plot_rect, min_auto_bounds, center_axis),
             last_click_pos_for_zoom: None,
             x_axis_thickness: Default::default(),
             y_axis_thickness: Default::default(),
@@ -1019,7 +1017,7 @@ impl<'a> Plot<'a> {
             }
         }
 
-        mem.transform = PlotTransform::new(plot_rect, bounds, center_axis.x, center_axis.y);
+        mem.transform = PlotTransform::new(plot_rect, bounds, center_axis);
 
         // Enforce aspect ratio
         if let Some(data_aspect) = data_aspect {
@@ -1207,6 +1205,7 @@ impl<'a> Plot<'a> {
             draw_cursor_x: linked_cursors.as_ref().map_or(false, |group| group.1.x),
             draw_cursor_y: linked_cursors.as_ref().map_or(false, |group| group.1.y),
             draw_cursors,
+            cursor_color,
             grid_spacers,
             sharp_grid_lines,
             clamp_grid,
@@ -1368,6 +1367,12 @@ fn axis_widgets<'a>(
         }
     }
 
+    // The loops iterated through {x,y}_axes in reverse order, so we have to reverse the
+    // {x,y}_axis_widgets vec as well. Otherwise, the indices are messed up and the plot memory
+    // (mem.{x,y}_axis_thickness) will access the wrong axis given an index.
+    x_axis_widgets.reverse();
+    y_axis_widgets.reverse();
+
     let mut plot_rect = rect_left;
 
     // If too little space, remove axis widgets
@@ -1491,6 +1496,7 @@ struct PreparedPlot<'a> {
     draw_cursor_x: bool,
     draw_cursor_y: bool,
     draw_cursors: Vec<Cursor>,
+    cursor_color: Option<Color32>,
 
     sharp_grid_lines: bool,
     clamp_grid: bool,
@@ -1532,7 +1538,7 @@ impl<'a> PreparedPlot<'a> {
         };
 
         // Draw cursors
-        let line_color = rulers_color(ui);
+        let line_color = self.cursor_color.unwrap_or_else(|| rulers_color(ui));
 
         let mut draw_cursor = |cursors: &Vec<Cursor>, always| {
             for &cursor in cursors {

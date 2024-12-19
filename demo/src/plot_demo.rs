@@ -504,7 +504,7 @@ impl CustomAxesDemo {
     }
 
     #[allow(clippy::unused_self)]
-    fn ui(&mut self, ui: &mut egui::Ui) -> Response {
+    fn ui(&self, ui: &mut egui::Ui) -> Response {
         const MINS_PER_DAY: f64 = CustomAxesDemo::MINS_PER_DAY;
         const MINS_PER_H: f64 = CustomAxesDemo::MINS_PER_H;
 
@@ -563,6 +563,10 @@ impl CustomAxesDemo {
         ui.label("Zoom in on the X-axis to see hours and minutes");
 
         let x_axes = vec![
+            AxisHints::new_x()
+                .label("Time")
+                .formatter(time_formatter)
+                .placement(egui_plot::VPlacement::Top),
             AxisHints::new_x().label("Time").formatter(time_formatter),
             AxisHints::new_x().label("Value"),
         ];
@@ -591,19 +595,15 @@ impl CustomAxesDemo {
 
 #[derive(PartialEq, serde::Deserialize, serde::Serialize)]
 struct LinkedAxesDemo {
-    link_x: bool,
-    link_y: bool,
-    link_cursor_x: bool,
-    link_cursor_y: bool,
+    link_axis: Vec2b,
+    link_cursor: Vec2b,
 }
 
 impl Default for LinkedAxesDemo {
     fn default() -> Self {
         Self {
-            link_x: true,
-            link_y: true,
-            link_cursor_x: true,
-            link_cursor_y: true,
+            link_axis: Vec2b::new(true, true),
+            link_cursor: Vec2b::new(true, true),
         }
     }
 }
@@ -644,13 +644,13 @@ impl LinkedAxesDemo {
     fn ui(&mut self, ui: &mut egui::Ui) -> Response {
         ui.horizontal(|ui| {
             ui.label("Linked axes:");
-            ui.checkbox(&mut self.link_x, "X");
-            ui.checkbox(&mut self.link_y, "Y");
+            ui.checkbox(&mut self.link_axis.x, "X");
+            ui.checkbox(&mut self.link_axis.y, "Y");
         });
         ui.horizontal(|ui| {
             ui.label("Linked cursors:");
-            ui.checkbox(&mut self.link_cursor_x, "X");
-            ui.checkbox(&mut self.link_cursor_y, "Y");
+            ui.checkbox(&mut self.link_cursor.x, "X");
+            ui.checkbox(&mut self.link_cursor.y, "Y");
         });
 
         ScrollArea::horizontal()
@@ -666,8 +666,8 @@ impl LinkedAxesDemo {
                 .data_aspect(1.0)
                 .width(250.0)
                 .height(250.0)
-                .link_axis(link_group_id, self.link_x, self.link_y)
-                .link_cursor(link_group_id, self.link_cursor_x, self.link_cursor_y)
+                .link_axis(link_group_id, self.link_axis)
+                .link_cursor(link_group_id, self.link_cursor)
                 .show(ui, Self::configure_plot);
             Plot::new("right-top")
                 .data_aspect(2.0)
@@ -675,8 +675,8 @@ impl LinkedAxesDemo {
                 .height(250.0)
                 .y_axis_label("y")
                 .y_axis_position(egui_plot::HPlacement::Right)
-                .link_axis(link_group_id, self.link_x, self.link_y)
-                .link_cursor(link_group_id, self.link_cursor_x, self.link_cursor_y)
+                .link_axis(link_group_id, self.link_axis)
+                .link_cursor(link_group_id, self.link_cursor)
                 .show(ui, Self::configure_plot);
         });
         Plot::new("left-bottom")
@@ -684,8 +684,8 @@ impl LinkedAxesDemo {
             .width(250.0)
             .height(150.0)
             .x_axis_label("x")
-            .link_axis(link_group_id, self.link_x, self.link_y)
-            .link_cursor(link_group_id, self.link_cursor_x, self.link_cursor_y)
+            .link_axis(link_group_id, self.link_axis)
+            .link_cursor(link_group_id, self.link_cursor)
             .show(ui, Self::configure_plot)
             .response
     }
@@ -772,7 +772,7 @@ struct InteractionDemo {}
 
 impl InteractionDemo {
     #[allow(clippy::unused_self)]
-    fn ui(&mut self, ui: &mut egui::Ui) -> Response {
+    fn ui(&self, ui: &mut egui::Ui) -> Response {
         let id = ui.make_persistent_id("interaction_demo");
 
         // This demonstrates how to read info about the plot _before_ showing it:
