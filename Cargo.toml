@@ -26,10 +26,10 @@ ahash = { version = "0.8.11", default-features = false, features = [
     "std",
 ] }
 document-features = "0.2.10"
-eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
-egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
-emath = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
-egui_kittest = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
+eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "54daf8519b0f62af9988bab04e59583a146bf823", default-features = false }
+egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "54daf8519b0f62af9988bab04e59583a146bf823", default-features = false }
+egui_kittest = { git = "ssh://git@github.com/embotech/egui.git", rev = "54daf8519b0f62af9988bab04e59583a146bf823", default-features = false }
+emath = { git = "ssh://git@github.com/embotech/egui.git", rev = "54daf8519b0f62af9988bab04e59583a146bf823", default-features = false }
 env_logger = { version = "0.11.6", default-features = false, features = [
     "auto-color",
     "humantime",

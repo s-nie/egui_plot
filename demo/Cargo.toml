@@ -15,8 +15,8 @@ workspace = true
 [dependencies]
 egui_plot = { workspace = true, features = ["serde"] }
 
-egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932" }
-eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false, features = [
+egui.workspace = true
+eframe = { workspace = true, default-features = false, features = [
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
     "persistence",   # Enable restoring app state when restarting the app.
@@ -31,8 +31,7 @@ env_logger.workspace = true
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures.workspace = true
-
-web-sys.workspace = true # to access the DOM (to hide the loading text)
+web-sys.workspace = true              # to access the DOM (to hide the loading text)
 
 [dev-dependencies]
 egui_kittest = { workspace = true, features = ["snapshot", "wgpu", "eframe"] }
