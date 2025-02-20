@@ -2,7 +2,8 @@ use std::f64::consts::TAU;
 use std::ops::RangeInclusive;
 
 use egui::{
-    remap, vec2, Color32, ComboBox, NumExt, Pos2, Response, ScrollArea, Stroke, TextWrapMode, Vec2b,
+    remap, vec2, Color32, ComboBox, NumExt, Pos2, Response, ScrollArea, Stroke, TextWrapMode,
+    Vec2b, WidgetInfo, WidgetType,
 };
 
 use egui_plot::{
@@ -66,14 +67,28 @@ impl PlotDemo {
         });
         ui.separator();
         ui.horizontal_wrapped(|ui| {
-            ui.selectable_value(&mut self.open_panel, Panel::Lines, "Lines");
-            ui.selectable_value(&mut self.open_panel, Panel::Markers, "Markers");
-            ui.selectable_value(&mut self.open_panel, Panel::Legend, "Legend");
-            ui.selectable_value(&mut self.open_panel, Panel::Charts, "Charts");
-            ui.selectable_value(&mut self.open_panel, Panel::Items, "Items");
-            ui.selectable_value(&mut self.open_panel, Panel::Interaction, "Interaction");
-            ui.selectable_value(&mut self.open_panel, Panel::CustomAxes, "Custom Axes");
-            ui.selectable_value(&mut self.open_panel, Panel::LinkedAxes, "Linked Axes");
+            // We give the ui a label so we can easily enumerate all demos in the tests
+            // The actual accessibility benefit is questionable considering the plot itself isn't
+            // accessible at all
+            let container_response = ui.response();
+            container_response
+                .widget_info(|| WidgetInfo::labeled(WidgetType::RadioGroup, true, "Select Demo"));
+
+            // TODO(lucasmerlin): The parent ui should ideally be automatically set as AccessKit parent
+            // or at least, with an opt in via UiBuilder, making this much more readable
+            // See https://github.com/emilk/egui/issues/5674
+            ui.ctx()
+                .clone()
+                .with_accessibility_parent(container_response.id, || {
+                    ui.selectable_value(&mut self.open_panel, Panel::Lines, "Lines");
+                    ui.selectable_value(&mut self.open_panel, Panel::Markers, "Markers");
+                    ui.selectable_value(&mut self.open_panel, Panel::Legend, "Legend");
+                    ui.selectable_value(&mut self.open_panel, Panel::Charts, "Charts");
+                    ui.selectable_value(&mut self.open_panel, Panel::Items, "Items");
+                    ui.selectable_value(&mut self.open_panel, Panel::Interaction, "Interaction");
+                    ui.selectable_value(&mut self.open_panel, Panel::CustomAxes, "Custom Axes");
+                    ui.selectable_value(&mut self.open_panel, Panel::LinkedAxes, "Linked Axes");
+                });
         });
         ui.separator();
 
@@ -211,9 +226,9 @@ impl LineDemo {
         });
     }
 
-    fn circle(&self) -> Line {
+    fn circle<'a>(&self) -> Line<'a> {
         let n = 512;
-        let circle_points: PlotPoints = (0..=n)
+        let circle_points: PlotPoints<'_> = (0..=n)
             .map(|i| {
                 let t = remap(i as f64, 0.0..=(n as f64), 0.0..=TAU);
                 let r = self.circle_radius;
@@ -223,34 +238,37 @@ impl LineDemo {
                 ]
             })
             .collect();
-        Line::new(circle_points)
+        Line::new("circle", circle_points)
             .color(Color32::from_rgb(100, 200, 100))
             .style(self.line_style)
-            .name("circle")
     }
 
-    fn sin(&self) -> Line {
+    fn sin<'a>(&self) -> Line<'a> {
         let time = self.time;
-        Line::new(PlotPoints::from_explicit_callback(
-            move |x| 0.5 * (2.0 * x).sin() * time.sin(),
-            ..,
-            512,
-        ))
+        Line::new(
+            "wave",
+            PlotPoints::from_explicit_callback(
+                move |x| 0.5 * (2.0 * x).sin() * time.sin(),
+                ..,
+                512,
+            ),
+        )
         .color(Color32::from_rgb(200, 100, 100))
         .style(self.line_style)
-        .name("wave")
     }
 
-    fn thingy(&self) -> Line {
+    fn thingy<'a>(&self) -> Line<'a> {
         let time = self.time;
-        Line::new(PlotPoints::from_parametric_callback(
-            move |t| ((2.0 * t + time).sin(), (3.0 * t).sin()),
-            0.0..=TAU,
-            256,
-        ))
+        Line::new(
+            "x = sin(2t), y = sin(3t)",
+            PlotPoints::from_parametric_callback(
+                move |t| ((2.0 * t + time).sin(), (3.0 * t).sin()),
+                0.0..=TAU,
+                256,
+            ),
+        )
         .color(Color32::from_rgb(100, 150, 250))
         .style(self.line_style)
-        .name("x = sin(2t), y = sin(3t)")
     }
 }
 
@@ -308,19 +326,22 @@ impl Default for MarkerDemo {
 }
 
 impl MarkerDemo {
-    fn markers(&self) -> Vec<Points> {
+    fn markers<'a>(&self) -> Vec<Points<'a>> {
         MarkerShape::all()
             .enumerate()
             .map(|(i, marker)| {
                 let y_offset = i as f64 * 0.5 + 1.0;
-                let mut points = Points::new(vec![
-                    [1.0, 0.0 + y_offset],
-                    [2.0, 0.5 + y_offset],
-                    [3.0, 0.0 + y_offset],
-                    [4.0, 0.5 + y_offset],
-                    [5.0, 0.0 + y_offset],
-                    [6.0, 0.5 + y_offset],
-                ])
+                let mut points = Points::new(
+                    "marker",
+                    vec![
+                        [1.0, 0.0 + y_offset],
+                        [2.0, 0.5 + y_offset],
+                        [3.0, 0.0 + y_offset],
+                        [4.0, 0.5 + y_offset],
+                        [5.0, 0.0 + y_offset],
+                        [6.0, 0.5 + y_offset],
+                    ],
+                )
                 .name(format!("{marker:?}"))
                 .filled(self.fill_markers)
                 .radius(self.marker_radius)
@@ -371,28 +392,25 @@ struct LegendDemo {
 }
 
 impl LegendDemo {
-    fn line_with_slope(slope: f64) -> Line {
-        Line::new(PlotPoints::from_explicit_callback(
-            move |x| slope * x,
-            ..,
-            100,
-        ))
+    fn line_with_slope<'a>(slope: f64) -> Line<'a> {
+        Line::new(
+            "line with slope",
+            PlotPoints::from_explicit_callback(move |x| slope * x, .., 100),
+        )
     }
 
-    fn sin() -> Line {
-        Line::new(PlotPoints::from_explicit_callback(
-            move |x| x.sin(),
-            ..,
-            100,
-        ))
+    fn sin<'a>() -> Line<'a> {
+        Line::new(
+            "sin(x)",
+            PlotPoints::from_explicit_callback(move |x| x.sin(), .., 100),
+        )
     }
 
-    fn cos() -> Line {
-        Line::new(PlotPoints::from_explicit_callback(
-            move |x| x.cos(),
-            ..,
-            100,
-        ))
+    fn cos<'a>() -> Line<'a> {
+        Line::new(
+            "cos(x)",
+            PlotPoints::from_explicit_callback(move |x| x.cos(), .., 100),
+        )
     }
 
     fn ui(&mut self, ui: &mut egui::Ui) -> Response {
@@ -455,7 +473,7 @@ impl CustomAxesDemo {
     const MINS_PER_DAY: f64 = 24.0 * 60.0;
     const MINS_PER_H: f64 = 60.0;
 
-    fn logistic_fn() -> Line {
+    fn logistic_fn<'a>() -> Line<'a> {
         fn days(min: f64) -> f64 {
             CustomAxesDemo::MINS_PER_DAY * min
         }
@@ -465,7 +483,7 @@ impl CustomAxesDemo {
             days(0.0)..days(5.0),
             100,
         );
-        Line::new(values)
+        Line::new("logistic fn", values)
     }
 
     #[allow(clippy::needless_pass_by_value)]
@@ -609,31 +627,28 @@ impl Default for LinkedAxesDemo {
 }
 
 impl LinkedAxesDemo {
-    fn line_with_slope(slope: f64) -> Line {
-        Line::new(PlotPoints::from_explicit_callback(
-            move |x| slope * x,
-            ..,
-            100,
-        ))
+    fn line_with_slope<'a>(slope: f64) -> Line<'a> {
+        Line::new(
+            "line with slope",
+            PlotPoints::from_explicit_callback(move |x| slope * x, .., 100),
+        )
     }
 
-    fn sin() -> Line {
-        Line::new(PlotPoints::from_explicit_callback(
-            move |x| x.sin(),
-            ..,
-            100,
-        ))
+    fn sin<'a>() -> Line<'a> {
+        Line::new(
+            "sin(x)",
+            PlotPoints::from_explicit_callback(move |x| x.sin(), .., 100),
+        )
     }
 
-    fn cos() -> Line {
-        Line::new(PlotPoints::from_explicit_callback(
-            move |x| x.cos(),
-            ..,
-            100,
-        ))
+    fn cos<'a>() -> Line<'a> {
+        Line::new(
+            "cos(x)",
+            PlotPoints::from_explicit_callback(move |x| x.cos(), .., 100),
+        )
     }
 
-    fn configure_plot(plot_ui: &mut egui_plot::PlotUi) {
+    fn configure_plot(plot_ui: &mut egui_plot::PlotUi<'_>) {
         plot_ui.line(Self::line_with_slope(0.5));
         plot_ui.line(Self::line_with_slope(1.0));
         plot_ui.line(Self::line_with_slope(2.0));
@@ -707,13 +722,16 @@ impl ItemsDemo {
             .map(|i| [i, i.sin()])
             .collect();
 
-        let line = Line::new(sin_values.split_off(n / 2)).fill(-1.5);
-        let polygon = Polygon::new(PlotPoints::from_parametric_callback(
-            |t| (4.0 * t.sin() + 2.0 * t.cos(), 4.0 * t.cos() + 2.0 * t.sin()),
-            0.0..TAU,
-            100,
-        ));
-        let points = Points::new(sin_values).stems(-1.5).radius(1.0);
+        let line = Line::new("sin(x)", sin_values.split_off(n / 2)).fill(-1.5);
+        let polygon = Polygon::new(
+            "polygon",
+            PlotPoints::from_parametric_callback(
+                |t| (4.0 * t.sin() + 2.0 * t.cos(), 4.0 * t.cos() + 2.0 * t.sin()),
+                0.0..TAU,
+                100,
+            ),
+        );
+        let points = Points::new("sin(x)", sin_values).stems(-1.5).radius(1.0);
 
         let arrows = {
             let pos_radius = 8.0;
@@ -728,7 +746,7 @@ impl ItemsDemo {
                 0.0..TAU,
                 36,
             );
-            Arrows::new(arrow_origins, arrow_tips)
+            Arrows::new("arrows", arrow_origins, arrow_tips)
         };
 
         let texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
@@ -736,6 +754,7 @@ impl ItemsDemo {
                 .load_texture("plot_demo", egui::ColorImage::example(), Default::default())
         });
         let image = PlotImage::new(
+            "image",
             texture,
             PlotPoint::new(0.0, 10.0),
             5.0 * vec2(texture.aspect_ratio(), 1.0),
@@ -747,17 +766,17 @@ impl ItemsDemo {
             .show_y(false)
             .data_aspect(1.0);
         plot.show(ui, |plot_ui| {
-            plot_ui.hline(HLine::new(9.0).name("Lines horizontal"));
-            plot_ui.hline(HLine::new(-9.0).name("Lines horizontal"));
-            plot_ui.vline(VLine::new(9.0).name("Lines vertical"));
-            plot_ui.vline(VLine::new(-9.0).name("Lines vertical"));
-            plot_ui.line(line.name("Line with fill"));
-            plot_ui.polygon(polygon.name("Convex polygon"));
-            plot_ui.points(points.name("Points with stems"));
-            plot_ui.text(Text::new(PlotPoint::new(-3.0, -3.0), "wow").name("Text"));
-            plot_ui.text(Text::new(PlotPoint::new(-2.0, 2.5), "so graph").name("Text"));
-            plot_ui.text(Text::new(PlotPoint::new(3.0, 3.0), "much color").name("Text"));
-            plot_ui.text(Text::new(PlotPoint::new(2.5, -2.0), "such plot").name("Text"));
+            plot_ui.hline(HLine::new("Lines horizontal", 9.0));
+            plot_ui.hline(HLine::new("Lines horizontal", -9.0));
+            plot_ui.vline(VLine::new("Lines vertical", 9.0));
+            plot_ui.vline(VLine::new("Lines vertical", -9.0));
+            plot_ui.line(line.name("Line with fill").id("line_with_fill"));
+            plot_ui.polygon(polygon.name("Convex polygon").id("convex_polygon"));
+            plot_ui.points(points.name("Points with stems").id("points_with_stems"));
+            plot_ui.text(Text::new("Text", PlotPoint::new(-3.0, -3.0), "wow").id("text0"));
+            plot_ui.text(Text::new("Text", PlotPoint::new(-2.0, 2.5), "so graph").id("text1"));
+            plot_ui.text(Text::new("Text", PlotPoint::new(3.0, 3.0), "much color").id("text2"));
+            plot_ui.text(Text::new("Text", PlotPoint::new(2.5, -2.0), "such plot").id("text3"));
             plot_ui.image(image.name("Image"));
             plot_ui.arrows(arrows.name("Arrows"));
         })
@@ -795,22 +814,18 @@ impl InteractionDemo {
             ..
         } = plot.show(ui, |plot_ui| {
             plot_ui.line(
-                Line::new(PlotPoints::from_explicit_callback(
-                    move |x| x.sin(),
-                    ..,
-                    100,
-                ))
-                .color(Color32::RED)
-                .id(egui::Id::new("sin")),
+                Line::new(
+                    "sin",
+                    PlotPoints::from_explicit_callback(move |x| x.sin(), .., 100),
+                )
+                .color(Color32::RED),
             );
             plot_ui.line(
-                Line::new(PlotPoints::from_explicit_callback(
-                    move |x| x.cos(),
-                    ..,
-                    100,
-                ))
-                .color(Color32::BLUE)
-                .id(egui::Id::new("cos")),
+                Line::new(
+                    "cos",
+                    PlotPoints::from_explicit_callback(move |x| x.cos(), .., 100),
+                )
+                .color(Color32::BLUE),
             );
 
             (
@@ -947,6 +962,7 @@ impl ChartsDemo {
 
     fn bar_gauss(&self, ui: &mut egui::Ui) -> Response {
         let mut chart = BarChart::new(
+            "Normal Distribution",
             (-395..=395)
                 .step_by(10)
                 .map(|x| x as f64 * 0.01)
@@ -957,11 +973,11 @@ impl ChartsDemo {
                     )
                 })
                 // The 10 factor here is purely for a nice 1:1 aspect ratio
-                .map(|(x, f)| Bar::new(x, f * 10.0).width(0.095))
+                .map(|(x, f)| Bar::new(x, f * 10.0).width(0.1))
                 .collect(),
         )
-        .color(Color32::LIGHT_BLUE)
-        .name("Normal Distribution");
+        .color(Color32::LIGHT_BLUE);
+
         if !self.vertical {
             chart = chart.horizontal();
         }
@@ -977,45 +993,57 @@ impl ChartsDemo {
     }
 
     fn bar_stacked(&self, ui: &mut egui::Ui) -> Response {
-        let mut chart1 = BarChart::new(vec![
-            Bar::new(0.5, 1.0).name("Day 1"),
-            Bar::new(1.5, 3.0).name("Day 2"),
-            Bar::new(2.5, 1.0).name("Day 3"),
-            Bar::new(3.5, 2.0).name("Day 4"),
-            Bar::new(4.5, 4.0).name("Day 5"),
-        ])
+        let mut chart1 = BarChart::new(
+            "chart1",
+            vec![
+                Bar::new(0.5, 1.0).name("Day 1"),
+                Bar::new(1.5, 3.0).name("Day 2"),
+                Bar::new(2.5, 1.0).name("Day 3"),
+                Bar::new(3.5, 2.0).name("Day 4"),
+                Bar::new(4.5, 4.0).name("Day 5"),
+            ],
+        )
         .width(0.7)
         .name("Set 1");
 
-        let mut chart2 = BarChart::new(vec![
-            Bar::new(0.5, 1.0),
-            Bar::new(1.5, 1.5),
-            Bar::new(2.5, 0.1),
-            Bar::new(3.5, 0.7),
-            Bar::new(4.5, 0.8),
-        ])
+        let mut chart2 = BarChart::new(
+            "chart2",
+            vec![
+                Bar::new(0.5, 1.0),
+                Bar::new(1.5, 1.5),
+                Bar::new(2.5, 0.1),
+                Bar::new(3.5, 0.7),
+                Bar::new(4.5, 0.8),
+            ],
+        )
         .width(0.7)
         .name("Set 2")
         .stack_on(&[&chart1]);
 
-        let mut chart3 = BarChart::new(vec![
-            Bar::new(0.5, -0.5),
-            Bar::new(1.5, 1.0),
-            Bar::new(2.5, 0.5),
-            Bar::new(3.5, -1.0),
-            Bar::new(4.5, 0.3),
-        ])
+        let mut chart3 = BarChart::new(
+            "chart3",
+            vec![
+                Bar::new(0.5, -0.5),
+                Bar::new(1.5, 1.0),
+                Bar::new(2.5, 0.5),
+                Bar::new(3.5, -1.0),
+                Bar::new(4.5, 0.3),
+            ],
+        )
         .width(0.7)
         .name("Set 3")
         .stack_on(&[&chart1, &chart2]);
 
-        let mut chart4 = BarChart::new(vec![
-            Bar::new(0.5, 0.5),
-            Bar::new(1.5, 1.0),
-            Bar::new(2.5, 0.5),
-            Bar::new(3.5, -0.5),
-            Bar::new(4.5, -0.5),
-        ])
+        let mut chart4 = BarChart::new(
+            "chart4",
+            vec![
+                Bar::new(0.5, 0.5),
+                Bar::new(1.5, 1.0),
+                Bar::new(2.5, 0.5),
+                Bar::new(3.5, -0.5),
+                Bar::new(4.5, -0.5),
+            ],
+        )
         .width(0.7)
         .name("Set 4")
         .stack_on(&[&chart1, &chart2, &chart3]);
@@ -1042,29 +1070,35 @@ impl ChartsDemo {
 
     fn box_plot(&self, ui: &mut egui::Ui) -> Response {
         let yellow = Color32::from_rgb(248, 252, 168);
-        let mut box1 = BoxPlot::new(vec![
-            BoxElem::new(0.5, BoxSpread::new(1.5, 2.2, 2.5, 2.6, 3.1)).name("Day 1"),
-            BoxElem::new(2.5, BoxSpread::new(0.4, 1.0, 1.1, 1.4, 2.1)).name("Day 2"),
-            BoxElem::new(4.5, BoxSpread::new(1.7, 2.0, 2.2, 2.5, 2.9)).name("Day 3"),
-        ])
-        .name("Experiment A");
+        let mut box1 = BoxPlot::new(
+            "Experiment A",
+            vec![
+                BoxElem::new(0.5, BoxSpread::new(1.5, 2.2, 2.5, 2.6, 3.1)).name("Day 1"),
+                BoxElem::new(2.5, BoxSpread::new(0.4, 1.0, 1.1, 1.4, 2.1)).name("Day 2"),
+                BoxElem::new(4.5, BoxSpread::new(1.7, 2.0, 2.2, 2.5, 2.9)).name("Day 3"),
+            ],
+        );
 
-        let mut box2 = BoxPlot::new(vec![
-            BoxElem::new(1.0, BoxSpread::new(0.2, 0.5, 1.0, 2.0, 2.7)).name("Day 1"),
-            BoxElem::new(3.0, BoxSpread::new(1.5, 1.7, 2.1, 2.9, 3.3))
-                .name("Day 2: interesting")
-                .stroke(Stroke::new(1.5, yellow))
-                .fill(yellow.linear_multiply(0.2)),
-            BoxElem::new(5.0, BoxSpread::new(1.3, 2.0, 2.3, 2.9, 4.0)).name("Day 3"),
-        ])
-        .name("Experiment B");
+        let mut box2 = BoxPlot::new(
+            "Experiment B",
+            vec![
+                BoxElem::new(1.0, BoxSpread::new(0.2, 0.5, 1.0, 2.0, 2.7)).name("Day 1"),
+                BoxElem::new(3.0, BoxSpread::new(1.5, 1.7, 2.1, 2.9, 3.3))
+                    .name("Day 2: interesting")
+                    .stroke(Stroke::new(1.5, yellow))
+                    .fill(yellow.linear_multiply(0.2)),
+                BoxElem::new(5.0, BoxSpread::new(1.3, 2.0, 2.3, 2.9, 4.0)).name("Day 3"),
+            ],
+        );
 
-        let mut box3 = BoxPlot::new(vec![
-            BoxElem::new(1.5, BoxSpread::new(2.1, 2.2, 2.6, 2.8, 3.0)).name("Day 1"),
-            BoxElem::new(3.5, BoxSpread::new(1.3, 1.5, 1.9, 2.2, 2.4)).name("Day 2"),
-            BoxElem::new(5.5, BoxSpread::new(0.2, 0.4, 1.0, 1.3, 1.5)).name("Day 3"),
-        ])
-        .name("Experiment C");
+        let mut box3 = BoxPlot::new(
+            "Experiment C",
+            vec![
+                BoxElem::new(1.5, BoxSpread::new(2.1, 2.2, 2.6, 2.8, 3.0)).name("Day 1"),
+                BoxElem::new(3.5, BoxSpread::new(1.3, 1.5, 1.9, 2.2, 2.4)).name("Day 2"),
+                BoxElem::new(5.5, BoxSpread::new(0.2, 0.4, 1.0, 1.3, 1.5)).name("Day 3"),
+            ],
+        );
 
         if !self.vertical {
             box1 = box1.horizontal();

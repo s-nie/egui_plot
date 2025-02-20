@@ -44,7 +44,7 @@ We don't update the MSRV in a patch release, unless we really, really need to.
 ## Preparation
 * [ ] optionally record gif or take a screenshot for `CHANGELOG.md` release note (and later twitter post)
 * [ ] update changelogs using `scripts/generate_changelog.py`
-  - For major releases, always diff to the latest MAJOR release, e.g. `--commit-range 0.27.0..HEAD`
+  - For major releases, always use the upcoming release, e.g. `--version 0.x.0`
 * [ ] bump version numbers in workspace `Cargo.toml`
 
 ## Actual release
@@ -59,6 +59,5 @@ I usually do this all on the `main` branch, but doing it in a release branch is 
 * [ ] `git pull --tags && git tag -d latest && git tag -a latest -m 'Latest release' && git push --tags origin latest --force && git push origin main ; git push --tags`
 * [ ] merge release PR or push to `main`
 * [ ] check that CI is green
-* [ ] do a GitHub release: https://github.com/emilk/egui/releases/new
-  * Follow the format of the last release
+* [ ] do a GitHub release: https://github.com/emilk/egui_plot/releases/new
 * [ ] wait for documentation to build: https://docs.rs/releases/queue

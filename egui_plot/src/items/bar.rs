@@ -1,5 +1,5 @@
 use egui::emath::NumExt;
-use egui::epaint::{Color32, RectShape, Rounding, Shape, Stroke};
+use egui::epaint::{Color32, CornerRadius, RectShape, Shape, Stroke};
 
 use super::{add_rulers_and_text, highlighted_color, Orientation, PlotConfig, RectElement};
 use crate::{BarChart, Cursor, PlotPoint, PlotTransform};
@@ -134,7 +134,13 @@ impl Bar {
         };
 
         let rect = transform.rect_from_values(&self.bounds_min(), &self.bounds_max());
-        let rect = Shape::Rect(RectShape::new(rect, Rounding::ZERO, fill, stroke));
+        let rect = Shape::Rect(RectShape::new(
+            rect,
+            CornerRadius::ZERO,
+            fill,
+            stroke,
+            egui::StrokeKind::Inside,
+        ));
 
         shapes.push(rect);
     }

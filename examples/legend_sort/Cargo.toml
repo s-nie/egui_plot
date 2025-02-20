@@ -1,10 +1,10 @@
 [package]
-name = "save_plot"
+name = "legend_sort"
 version = "0.1.0"
 authors = ["hacknus <l_stoeckli@bluewin.ch>"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.81"
+rust-version = "1.80"
 publish = false
 
 [lints]
@@ -13,8 +13,6 @@ workspace = true
 [dependencies]
 eframe = { workspace = true, features = ["default"] }
 egui_plot.workspace = true
-image = { workspace = true, features = ["png"] }
-rfd = "0.15.1"
 env_logger = { workspace = true, default-features = false, features = [
     "auto-color",
     "humantime",

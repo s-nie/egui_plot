@@ -20,8 +20,7 @@ use std::{cmp::Ordering, ops::RangeInclusive, sync::Arc};
 use ahash::HashMap;
 use egui::{
     epaint, remap_clamp, vec2, Align2, Color32, CursorIcon, Id, Layout, NumExt, PointerButton,
-    Pos2, Rangef, Rect, Response, Rounding, Sense, Shape, Stroke, TextStyle, Ui, Vec2, Vec2b,
-    WidgetText,
+    Pos2, Rangef, Rect, Response, Sense, Shape, Stroke, TextStyle, Ui, Vec2, Vec2b, WidgetText,
 };
 use emath::Float as _;
 
@@ -32,7 +31,7 @@ pub use crate::{
         MarkerShape, Orientation, PlotConfig, PlotGeometry, PlotImage, PlotItem, PlotPoint,
         PlotPoints, Points, Polygon, Text, VLine,
     },
-    legend::{Corner, Legend},
+    legend::{ColorConflictHandling, Corner, Legend},
     memory::PlotMemory,
     plot_ui::PlotUi,
     transform::{PlotBounds, PlotTransform},
@@ -126,7 +125,9 @@ pub struct PlotResponse<R> {
 
     /// The id of a currently hovered item if any.
     ///
-    /// This is `None` if either no item was hovered, or the hovered item didn't provide an id.
+    /// This is `None` if either no item was hovered.
+    /// A plot item can be hovered either by hovering its representation in the plot (line, marker, etc.)
+    /// or by hovering the item in the legend.
     pub hovered_plot_item: Option<Id>,
 }
 
@@ -144,7 +145,7 @@ pub struct PlotResponse<R> {
 ///     let x = i as f64 * 0.01;
 ///     [x, x.sin()]
 /// }).collect();
-/// let line = Line::new(sin);
+/// let line = Line::new("sin", sin);
 /// Plot::new("my_plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));
 /// # });
 /// ```
@@ -187,7 +188,6 @@ pub struct Plot<'a> {
     show_grid: Vec2b,
     grid_spacing: Rangef,
     grid_spacers: [GridSpacer<'a>; 2],
-    sharp_grid_lines: bool,
     clamp_grid: bool,
 
     sense: Sense,
@@ -235,7 +235,6 @@ impl<'a> Plot<'a> {
             show_grid: true.into(),
             grid_spacing: Rangef::new(8.0, 300.0),
             grid_spacers: [log_grid_spacer(10), log_grid_spacer(10)],
-            sharp_grid_lines: true,
             clamp_grid: false,
 
             sense: egui::Sense::click_and_drag(),
@@ -398,7 +397,7 @@ impl<'a> Plot<'a> {
     ///     let x = i as f64 * 0.01;
     ///     [x, x.sin()]
     /// }).collect();
-    /// let line = Line::new(sin);
+    /// let line = Line::new("sin", sin);
     /// Plot::new("my_plot").view_aspect(2.0)
     /// .label_formatter(|name, value| {
     ///     if !name.is_empty() {
@@ -522,8 +521,8 @@ impl<'a> Plot<'a> {
     ///
     /// This is enabled by default.
     #[inline]
-    pub fn auto_bounds(mut self, auto_bounds: Vec2b) -> Self {
-        self.default_auto_bounds = auto_bounds;
+    pub fn auto_bounds(mut self, auto_bounds: impl Into<Vec2b>) -> Self {
+        self.default_auto_bounds = auto_bounds.into();
         self
     }
 
@@ -589,16 +588,16 @@ impl<'a> Plot<'a> {
     /// Add this plot to a cursor link group so that this plot will share the cursor position with other plots
     /// in the same group. A plot cannot belong to more than one cursor group.
     #[inline]
-    pub fn link_cursor(mut self, group_id: impl Into<Id>, link: Vec2b) -> Self {
-        self.linked_cursors = Some((group_id.into(), link));
+    pub fn link_cursor(mut self, group_id: impl Into<Id>, link: impl Into<Vec2b>) -> Self {
+        self.linked_cursors = Some((group_id.into(), link.into()));
         self
     }
 
     /// Round grid positions to full pixels to avoid aliasing. Improves plot appearance but might have an
     /// undesired effect when shifting the plot bounds. Enabled by default.
     #[inline]
-    pub fn sharp_grid_lines(mut self, enabled: bool) -> Self {
-        self.sharp_grid_lines = enabled;
+    #[deprecated = "This no longer has any effect and is always enabled."]
+    pub fn sharp_grid_lines(self, _enabled: bool) -> Self {
         self
     }
 
@@ -725,20 +724,20 @@ impl<'a> Plot<'a> {
     }
 
     /// Interact with and add items to the plot and finally draw it.
-    pub fn show<R>(
+    pub fn show<'b, R>(
         self,
         ui: &mut Ui,
-        build_fn: impl FnOnce(&mut PlotUi) -> R + 'a,
+        build_fn: impl FnOnce(&mut PlotUi<'b>) -> R + 'a,
     ) -> PlotResponse<R> {
         self.show_dyn(ui, Box::new(build_fn))
     }
 
     #[allow(clippy::too_many_lines)] // TODO(emilk): shorten this function
     #[allow(clippy::type_complexity)] // build_fn
-    fn show_dyn<R>(
+    fn show_dyn<'b, R>(
         self,
         ui: &mut Ui,
-        build_fn: Box<dyn FnOnce(&mut PlotUi) -> R + 'a>,
+        build_fn: Box<dyn FnOnce(&mut PlotUi<'b>) -> R + 'a>,
     ) -> PlotResponse<R> {
         let Self {
             id_source,
@@ -776,7 +775,6 @@ impl<'a> Plot<'a> {
 
             clamp_grid,
             grid_spacers,
-            sharp_grid_lines,
             sense,
         } = self;
 
@@ -884,9 +882,10 @@ impl<'a> Plot<'a> {
                 .with_clip_rect(plot_rect)
                 .add(epaint::RectShape::new(
                     plot_rect,
-                    Rounding::same(2.0),
+                    2,
                     ui.visuals().extreme_bg_color,
                     ui.visuals().widgets.noninteractive.bg_stroke,
+                    egui::StrokeKind::Inside,
                 ));
         }
 
@@ -899,12 +898,12 @@ impl<'a> Plot<'a> {
             show_y = false;
         }
         // Remove the deselected items.
-        items.retain(|item| !mem.hidden_items.contains(item.name()));
+        items.retain(|item| !mem.hidden_items.contains(&item.id()));
         // Highlight the hovered items.
-        if let Some(hovered_name) = &mem.hovered_legend_item {
+        if let Some(item_id) = &mem.hovered_legend_item {
             items
                 .iter_mut()
-                .filter(|entry| entry.name() == hovered_name)
+                .filter(|entry| &entry.id() == item_id)
                 .for_each(|entry| entry.highlight());
         }
         // Move highlighted items to front.
@@ -1070,11 +1069,13 @@ impl<'a> Plot<'a> {
                             rect,
                             0.0,
                             epaint::Stroke::new(4., Color32::DARK_BLUE),
+                            egui::StrokeKind::Middle,
                         ), // Outer stroke
                         epaint::RectShape::stroke(
                             rect,
                             0.0,
                             epaint::Stroke::new(2., Color32::WHITE),
+                            egui::StrokeKind::Middle,
                         ), // Inner stroke
                     ));
                 }
@@ -1106,7 +1107,7 @@ impl<'a> Plot<'a> {
         // For instance: The user is painting another interactive widget on top of the plot
         // but they still want to be able to pan/zoom the plot.
         if let (true, Some(hover_pos)) = (
-            response.contains_pointer,
+            response.contains_pointer(),
             ui.input(|i| i.pointer.hover_pos()),
         ) {
             if allow_zoom.any() {
@@ -1207,11 +1208,10 @@ impl<'a> Plot<'a> {
             draw_cursors,
             cursor_color,
             grid_spacers,
-            sharp_grid_lines,
             clamp_grid,
         };
 
-        let (plot_cursors, hovered_plot_item) = prepared.ui(ui, &response);
+        let (plot_cursors, mut hovered_plot_item) = prepared.ui(ui, &response);
 
         if let Some(boxed_zoom_rect) = boxed_zoom_rect {
             ui.painter()
@@ -1225,7 +1225,11 @@ impl<'a> Plot<'a> {
         if let Some(mut legend) = legend {
             ui.add(&mut legend);
             mem.hidden_items = legend.hidden_items();
-            mem.hovered_legend_item = legend.hovered_item_name();
+            mem.hovered_legend_item = legend.hovered_item();
+
+            if let Some(item_id) = &mem.hovered_legend_item {
+                hovered_plot_item.get_or_insert(*item_id);
+            }
         }
 
         if let Some((id, _)) = linked_cursors.as_ref() {
@@ -1277,7 +1281,7 @@ impl<'a> Plot<'a> {
 /// Returns the rect left after adding axes.
 fn axis_widgets<'a>(
     mem: Option<&PlotMemory>,
-    show_axes: Vec2b,
+    show_axes: impl Into<Vec2b>,
     complete_rect: Rect,
     [x_axes, y_axes]: [&'a [AxisHints<'a>]; 2],
 ) -> ([Vec<AxisWidget<'a>>; 2], Rect) {
@@ -1303,6 +1307,7 @@ fn axis_widgets<'a>(
     //      |      X-axis 1      |   |
     //  +   +--------------------+---+
     //
+    let show_axes = show_axes.into();
 
     let mut x_axis_widgets = Vec::<AxisWidget<'_>>::new();
     let mut y_axis_widgets = Vec::<AxisWidget<'_>>::new();
@@ -1483,7 +1488,7 @@ pub fn uniform_grid_spacer<'a>(spacer: impl Fn(GridInput) -> [f64; 3] + 'a) -> G
 // ----------------------------------------------------------------------------
 
 struct PreparedPlot<'a> {
-    items: Vec<Box<dyn PlotItem>>,
+    items: Vec<Box<dyn PlotItem + 'a>>,
     show_x: bool,
     show_y: bool,
     label_formatter: LabelFormatter<'a>,
@@ -1498,7 +1503,6 @@ struct PreparedPlot<'a> {
     draw_cursors: Vec<Cursor>,
     cursor_color: Option<Color32>,
 
-    sharp_grid_lines: bool,
     clamp_grid: bool,
 }
 
@@ -1675,12 +1679,6 @@ impl<'a> PreparedPlot<'a> {
                 }
             }
 
-            if self.sharp_grid_lines {
-                // Round to avoid aliasing
-                p0 = ui.painter().round_pos_to_pixels(p0);
-                p1 = ui.painter().round_pos_to_pixels(p1);
-            }
-
             shapes.push((
                 Shape::line_segment([p0, p1], Stroke::new(1.0, line_color)),
                 line_strength,
@@ -1729,7 +1727,7 @@ impl<'a> PreparedPlot<'a> {
 
         let hovered_plot_item_id = if let Some((item, elem)) = closest {
             item.on_hover(elem, shapes, &mut cursors, &plot, label_formatter);
-            item.id()
+            Some(item.id())
         } else {
             let value = transform.value_from_position(pointer);
             items::rulers_at_value(

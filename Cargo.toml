@@ -6,8 +6,8 @@ members = ["egui_plot", "demo", "examples/*"]
 [workspace.package]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-rust-version = "1.80"
-version = "0.30.0"
+rust-version = "1.81"
+version = "0.31.0"
 
 
 [profile.release]
@@ -19,7 +19,7 @@ opt-level = 2
 
 
 [workspace.dependencies]
-egui_plot = { version = "0.30.0", path = "egui_plot", default-features = false }
+egui_plot = { version = "0.31.0", path = "egui_plot", default-features = false }
 
 ahash = { version = "0.8.11", default-features = false, features = [
     "no-rng", # we don't need DOS-protection, so we let users opt-in to it instead
@@ -29,7 +29,8 @@ document-features = "0.2.10"
 eframe = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
 egui = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
 emath = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
-env_logger = { version = "0.10", default-features = false, features = [
+egui_kittest = { git = "ssh://git@github.com/embotech/egui.git", rev = "422974bc46a90c077f8f26409cf9b6d7dc829932", default-features = false }
+env_logger = { version = "0.11.6", default-features = false, features = [
     "auto-color",
     "humantime",
 ] }
@@ -41,13 +42,16 @@ web-sys = "0.3.70"
 
 
 [patch.crates-io]
-# If you want to use the bleeding edge version of egui and eframe:
+# When we want to use the bleeding edge version of egui and eframe:
 # egui = { git = "https://github.com/emilk/egui", branch = "master" }
+# egui_kittest = { git = "https://github.com/emilk/egui", branch = "master" }
 # eframe = { git = "https://github.com/emilk/egui", branch = "master" }
+# emath = { git = "https://github.com/emilk/egui", branch = "master" }
 
 # If you fork https://github.com/emilk/egui you can test with:
-# egui = { path = "../egui/crates/egui" }
 # eframe = { path = "../egui/crates/eframe" }
+# egui = { path = "../egui/crates/egui" }
+# emath = { path = "../egui/crates/emath" }
 
 
 [workspace.lints.rust]

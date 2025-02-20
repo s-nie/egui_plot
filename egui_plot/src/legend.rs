@@ -1,8 +1,8 @@
 use std::{collections::BTreeMap, string::String};
 
 use egui::{
-    epaint::CircleShape, pos2, vec2, Align, Color32, Direction, Frame, Layout, PointerButton, Rect,
-    Response, Sense, Shadow, Shape, TextStyle, Ui, Widget, WidgetInfo, WidgetType,
+    epaint::CircleShape, pos2, vec2, Align, Color32, Direction, Frame, Id, Layout, PointerButton,
+    Rect, Response, Sense, Shadow, Shape, TextStyle, Ui, Widget, WidgetInfo, WidgetType,
 };
 
 use super::items::PlotItem;
@@ -30,6 +30,15 @@ impl Corner {
     }
 }
 
+/// How to handle multiple conflicting color for a legend item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+pub enum ColorConflictHandling {
+    PickFirst,
+    PickLast,
+    RemoveColor,
+}
+
 /// The configuration for a plot legend.
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
@@ -38,8 +47,11 @@ pub struct Legend {
     pub background_alpha: f32,
     pub position: Corner,
 
+    follow_insertion_order: bool,
+    color_conflict_handling: ColorConflictHandling,
+
     /// Used for overriding the `hidden_items` set in [`LegendWidget`].
-    hidden_items: Option<ahash::HashSet<String>>,
+    hidden_items: Option<ahash::HashSet<Id>>,
 }
 
 impl Default for Legend {
@@ -48,7 +60,8 @@ impl Default for Legend {
             text_style: TextStyle::Body,
             background_alpha: 0.75,
             position: Corner::RightTop,
-
+            follow_insertion_order: false,
+            color_conflict_handling: ColorConflictHandling::RemoveColor,
             hidden_items: None,
         }
     }
@@ -81,31 +94,57 @@ impl Legend {
     #[inline]
     pub fn hidden_items<I>(mut self, hidden_items: I) -> Self
     where
-        I: IntoIterator<Item = String>,
+        I: IntoIterator<Item = Id>,
     {
         self.hidden_items = Some(hidden_items.into_iter().collect());
+        self
+    }
+
+    /// Specifies if the legend item order should be the inserted order.
+    /// Default: `false`.
+    /// If `true`, the order of the legend items will be the same as the order as they were added.
+    /// By default it will be sorted alphabetically.
+    #[inline]
+    pub fn follow_insertion_order(mut self, follow: bool) -> Self {
+        self.follow_insertion_order = follow;
+        self
+    }
+
+    /// Specifies how to handle conflicting colors for an item.
+    #[inline]
+    pub fn color_conflict_handling(
+        mut self,
+        color_conflict_handling: ColorConflictHandling,
+    ) -> Self {
+        self.color_conflict_handling = color_conflict_handling;
         self
     }
 }
 
 #[derive(Clone)]
 struct LegendEntry {
+    id: Id,
+    name: String,
     color: Color32,
     checked: bool,
     hovered: bool,
 }
 
 impl LegendEntry {
-    fn new(color: Color32, checked: bool) -> Self {
+    fn new(id: Id, name: String, color: Color32, checked: bool) -> Self {
         Self {
+            id,
+            name,
             color,
             checked,
             hovered: false,
         }
     }
 
-    fn ui(&self, ui: &mut Ui, text: String, text_style: &TextStyle) -> Response {
+    fn ui(&self, ui: &mut Ui, text_style: &TextStyle) -> Response {
         let Self {
+            id: _,
+            name,
             color,
             checked,
             hovered: _,
@@ -113,7 +152,7 @@ impl LegendEntry {
 
         let font_id = text_style.resolve(ui.style());
 
-        let galley = ui.fonts(|f| f.layout_delayed_color(text, font_id, f32::INFINITY));
+        let galley = ui.fonts(|f| f.layout_delayed_color(name.clone(), font_id, f32::INFINITY));
 
         let icon_size = galley.size().y;
         let icon_spacing = icon_size / 5.0;
@@ -180,65 +219,78 @@ impl LegendEntry {
 #[derive(Clone)]
 pub(super) struct LegendWidget {
     rect: Rect,
-    entries: BTreeMap<String, LegendEntry>,
+    entries: Vec<LegendEntry>,
     config: Legend,
 }
 
 impl LegendWidget {
     /// Create a new legend from items, the names of items that are hidden and the style of the
     /// text. Returns `None` if the legend has no entries.
-    pub(super) fn try_new(
+    pub(super) fn try_new<'a>(
         rect: Rect,
         config: Legend,
-        items: &[Box<dyn PlotItem>],
-        hidden_items: &ahash::HashSet<String>, // Existing hidden items in the plot memory.
+        items: &[Box<dyn PlotItem + 'a>],
+        hidden_items: &ahash::HashSet<Id>, // Existing hidden items in the plot memory.
     ) -> Option<Self> {
         // If `config.hidden_items` is not `None`, it is used.
         let hidden_items = config.hidden_items.as_ref().unwrap_or(hidden_items);
 
         // Collect the legend entries. If multiple items have the same name, they share a
         // checkbox. If their colors don't match, we pick a neutral color for the checkbox.
-        let mut entries: BTreeMap<String, LegendEntry> = BTreeMap::new();
+        let mut keys: BTreeMap<String, usize> = BTreeMap::new();
+        let mut entries: BTreeMap<(usize, &str), LegendEntry> = BTreeMap::new();
         items
             .iter()
             .filter(|item| !item.name().is_empty())
             .for_each(|item| {
+                let next_entry = entries.len();
+                let key = if config.follow_insertion_order {
+                    *keys.entry(item.name().to_owned()).or_insert(next_entry)
+                } else {
+                    // Use the same key if we don't want insertion order
+                    0
+                };
+
                 entries
-                    .entry(item.name().to_owned())
+                    .entry((key, item.name()))
                     .and_modify(|entry| {
                         if entry.color != item.color() {
-                            // Multiple items with different colors
-                            entry.color = Color32::TRANSPARENT;
+                            match config.color_conflict_handling {
+                                ColorConflictHandling::PickFirst => (),
+                                ColorConflictHandling::PickLast => entry.color = item.color(),
+                                ColorConflictHandling::RemoveColor => {
+                                    // Multiple items with different colors
+                                    entry.color = Color32::TRANSPARENT;
+                                }
+                            }
                         }
                     })
                     .or_insert_with(|| {
                         let color = item.color();
-                        let checked = !hidden_items.contains(item.name());
-                        LegendEntry::new(color, checked)
+                        let checked = !hidden_items.contains(&item.id());
+                        LegendEntry::new(item.id(), item.name().to_owned(), color, checked)
                     });
             });
         (!entries.is_empty()).then_some(Self {
             rect,
-            entries,
+            entries: entries.into_values().collect(),
             config,
         })
     }
 
     // Get the names of the hidden items.
-    pub fn hidden_items(&self) -> ahash::HashSet<String> {
+    pub fn hidden_items(&self) -> ahash::HashSet<Id> {
         self.entries
             .iter()
-            .filter(|(_, entry)| !entry.checked)
-            .map(|(name, _)| name.clone())
+            .filter_map(|entry| (!entry.checked).then_some(entry.id))
             .collect()
     }
 
     // Get the name of the hovered items.
-    pub fn hovered_item_name(&self) -> Option<String> {
+    pub fn hovered_item(&self) -> Option<Id> {
         self.entries
             .iter()
-            .find(|(_, entry)| entry.hovered)
-            .map(|(name, _)| name.to_string())
+            .find_map(|entry| entry.hovered.then_some(entry.id))
     }
 }
 
@@ -267,7 +319,7 @@ impl Widget for &mut LegendWidget {
             .scope(|ui| {
                 let background_frame = Frame {
                     inner_margin: vec2(8.0, 4.0).into(),
-                    rounding: ui.style().visuals.window_rounding,
+                    corner_radius: ui.style().visuals.window_corner_radius,
                     shadow: Shadow::NONE,
                     fill: ui.style().visuals.extreme_bg_color,
                     stroke: ui.style().visuals.window_stroke(),
@@ -280,14 +332,14 @@ impl Widget for &mut LegendWidget {
 
                         let response_union = entries
                             .iter_mut()
-                            .map(|(name, entry)| {
-                                let response = entry.ui(ui, name.clone(), &config.text_style);
+                            .map(|entry| {
+                                let response = entry.ui(ui, &config.text_style);
 
                                 // Handle interactions. Alt-clicking must be deferred to end of loop
                                 // since it may affect all entries.
                                 handle_interaction_on_legend_item(&response, entry);
                                 if response.clicked() && ui.input(|r| r.modifiers.alt) {
-                                    focus_on_item = Some(name.clone());
+                                    focus_on_item = Some(entry.id);
                                 }
 
                                 response
@@ -314,17 +366,14 @@ fn handle_interaction_on_legend_item(response: &Response, entry: &mut LegendEntr
 }
 
 /// Handle alt-click interaction (which may affect all entries).
-fn handle_focus_on_legend_item(
-    clicked_entry_name: &str,
-    entries: &mut BTreeMap<String, LegendEntry>,
-) {
+fn handle_focus_on_legend_item(clicked_entry: &Id, entries: &mut [LegendEntry]) {
     // if all other items are already hidden, we show everything
     let is_focus_item_only_visible = entries
         .iter()
-        .all(|(name, entry)| !entry.checked || (clicked_entry_name == name));
+        .all(|entry| !entry.checked || (clicked_entry == &entry.id));
 
     // either show everything or show only the focus item
-    for (name, entry) in entries.iter_mut() {
-        entry.checked = is_focus_item_only_visible || clicked_entry_name == name;
+    for entry in entries.iter_mut() {
+        entry.checked = is_focus_item_only_visible || clicked_entry == &entry.id;
     }
 }
