@@ -970,7 +970,7 @@ checksum = "f25c0e292a7ca6d6498557ff1df68f32c99850012b6ea401cf8daf771f22ff53"
 [[package]]
 name = "ecolor"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "bytemuck",
  "emath",
@@ -980,7 +980,7 @@ dependencies = [
 [[package]]
 name = "eframe"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1020,7 +1020,7 @@ dependencies = [
 [[package]]
 name = "egui"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "accesskit",
  "ahash",
@@ -1037,7 +1037,7 @@ dependencies = [
 [[package]]
 name = "egui-wgpu"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1056,7 +1056,7 @@ dependencies = [
 [[package]]
 name = "egui-winit"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "accesskit_winit",
  "ahash",
@@ -1076,7 +1076,7 @@ dependencies = [
 [[package]]
 name = "egui_glow"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "ahash",
  "bytemuck",
@@ -1093,7 +1093,7 @@ dependencies = [
 [[package]]
 name = "egui_kittest"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "dify",
  "eframe",
@@ -1125,7 +1125,7 @@ checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 [[package]]
 name = "emath"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "bytemuck",
  "serde",
@@ -1194,7 +1194,7 @@ dependencies = [
 [[package]]
 name = "epaint"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 dependencies = [
  "ab_glyph",
  "ahash",
@@ -1212,7 +1212,7 @@ dependencies = [
 [[package]]
 name = "epaint_default_fonts"
 version = "0.31.0"
-source = "git+ssh://git@github.com/embotech/egui.git?rev=54daf8519b0f62af9988bab04e59583a146bf823#54daf8519b0f62af9988bab04e59583a146bf823"
+source = "git+ssh://git@github.com/embotech/egui.git?rev=5637d3cbcd48071939f5f7289f5834b7ad25c85e#5637d3cbcd48071939f5f7289f5834b7ad25c85e"
 
 [[package]]
 name = "equivalent"
