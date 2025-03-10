@@ -1111,21 +1111,10 @@ impl<'a> Plot<'a> {
             ui.input(|i| i.pointer.hover_pos()),
         ) {
             if allow_zoom.any() {
-                let raw_delta = ui.input(|i| {
-                    i.raw
-                        .events
-                        .iter()
-                        .filter_map(|event| match event {
-                            egui::Event::MouseWheel { delta, .. } => Some(*delta),
-                            _ => None,
-                        })
-                        .fold(Vec2::ZERO, |sum, new| sum + new)
-                });
-                let scaled_delta = 0.5 * raw_delta;
                 let mut zoom_factor = if data_aspect.is_some() {
-                    Vec2::splat(scaled_delta.y.exp())
+                    Vec2::splat(ui.input(|i| i.zoom_delta()))
                 } else {
-                    Vec2::new(scaled_delta.x.exp(), scaled_delta.y.exp())
+                    ui.input(|i| i.zoom_delta_2d())
                 };
                 if !allow_zoom.x {
                     zoom_factor.x = 1.0;
